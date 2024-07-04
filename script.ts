@@ -1,6 +1,5 @@
 type Mark = "X" | "O" | " "
 type PlayerType = "human" | "computer"
-type Winner = "playerOne" | "playerTwo" | null
 
 enum Position {
     topleft = 'topleft',
@@ -28,25 +27,23 @@ interface GameBoard {
     isPositionMarked: (position: Position) => boolean
     getMark: (position: Position) => Mark
     showBoard: () => void
+    resetBoard: () => void
+    anySpacesLeft: () => boolean
 }
 
 interface Game {
     setGame: (playerName1: string, playerName2: string, opponentType: PlayerType) => void
-    // getCurrentPlayer: (player1: Player, player2: Player | Computer) => Player | Computer
-    // checkWinner: (gameboard: GameBoard) => Winner
-    // decideWinner: (winner: Winner) => void,
-    // changeTurns: (player1: Player, player2: Player) => void,
-    makePlay: (position: Position) => void, //* Can only be called if stage is 'play'
-    // startGame: () => void,
-    // isComputerTurn: (player2: Player) => boolean,
-    // reset: () => void
+    makePlay: (position: Position) => void
 }
 
+interface checkWinner {
+    (mark: Mark): Player | null
+}
 
 //* Game Logic
 
 function GameBoard(): GameBoard {
-    const board = new Map()
+    const board: Map<Position, Mark> = new Map()
     board.set(Position.topleft, ' ')
     board.set(Position.topcenter, ' ')
     board.set(Position.topright, ' ')
@@ -65,7 +62,7 @@ function GameBoard(): GameBoard {
     }
 
     const getMark = (position: Position) => {
-        return board.get(position)
+        return board.get(position)!
     }
 
     const showBoard = () => {
@@ -74,7 +71,24 @@ function GameBoard(): GameBoard {
         console.log(board.get(Position.bottomleft), board.get(Position.bottomcenter), board.get(Position.bottomright))
     }
 
-    return { setMark, isPositionMarked, getMark, showBoard }
+    const resetBoard = () => {
+        const makeTileEmpty = (_, key) => board.set(key, " ")
+        board.forEach(makeTileEmpty)
+        showBoard()
+    }
+
+    const anySpacesLeft = () => {
+        let isThereSpace = false
+
+        board.forEach((space) => {
+            if (space === ' ') {
+                isThereSpace = true
+            }
+        })
+        return isThereSpace
+    }
+
+    return { setMark, isPositionMarked, getMark, showBoard, resetBoard, anySpacesLeft }
 }
 
 function Player(name: string, playerType: PlayerType, mark: Mark): Player {
@@ -105,7 +119,15 @@ let game = ((): Game => {
 
     const decideFirstPlayer = () => {
         const randomNum = Math.floor(Math.random() * 2)
-        randomNum === 1 ? playerOne.playerTurn = true : playerTwo.playerTurn = true
+        if (randomNum === 1) {
+            playerOne.playerTurn = true
+            playerTwo.playerTurn = false
+        }
+        else{
+            playerOne.playerTurn = false
+            playerTwo.playerTurn = true
+        }
+        console.log(`Player One goes ${playerOne.playerTurn ? "first" : "second"}`)
     }
 
     const getCurrentPlayer = () => playerOne.playerTurn ? playerOne : playerTwo
@@ -124,17 +146,29 @@ let game = ((): Game => {
         ]
 
         while (true) {
-            let randomNum = positions[Math.floor(Math.random() * 10)]
+            let randomNum = Math.floor(Math.random() * 10)
             if (!gameBoard.isPositionMarked(positions[randomNum])) {
                 return positions[randomNum]
             }
         }
 
     }
-    const checkWinner = (gameboard: GameBoard) => {
-
+    const checkWinner: checkWinner = (mark: Mark) => {
+        let currentMark = mark
+        if (
+            gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.topcenter) === currentMark && gameBoard.getMark(Position.topright) === currentMark ||
+            gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.centerleft) === currentMark && gameBoard.getMark(Position.bottomleft) === currentMark ||
+            gameBoard.getMark(Position.centerleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.centerright) === currentMark ||
+            gameBoard.getMark(Position.topcenter) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.bottomcenter) === currentMark ||
+            gameBoard.getMark(Position.topright) === currentMark && gameBoard.getMark(Position.centerright) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.bottomleft) === currentMark && gameBoard.getMark(Position.bottomcenter) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.bottomleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.topright) === currentMark
+        ) {
+            return mark === "O" ? playerOne : playerTwo
+        }
+        return null
     }
-    const decideWinner = (winner: Winner) => 'void'
 
     const changeTurns = () => {
         if (playerOne.playerTurn) {
@@ -152,11 +186,37 @@ let game = ((): Game => {
             const mark = currentPlayer.getMark()
             gameBoard.setMark(position, mark)
             gameBoard.showBoard()
+            const isWinner = checkWinner(currentPlayer.getMark())
+            if (isWinner) {
+                makeAnnounce(isWinner)
+                startNewGame()
+                return
+            }
+            if (!gameBoard.anySpacesLeft()) {
+                console.log("TIE!")
+                startNewGame()
+                return
+            }
             changeTurns()
+            if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
+                let position = makeComputerPlay()
+                makePlay(position)
+            }
         }
     }
 
-    const reset = () => { }
+    const makeAnnounce = (winner: Player) => {
+        console.log(`${winner.name} is the winner!`)
+    }
+
+    const startNewGame = () => {
+        gameBoard.resetBoard()
+        decideFirstPlayer()
+        if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
+            let position = makeComputerPlay()
+            makePlay(position)
+        }
+    }
 
     return { setGame, makePlay }
 })()
@@ -175,24 +235,3 @@ const createPlayer = (playerName: string, playerMark: Mark, type: PlayerType): P
     return { name, playerType, getMark, togglePlayerTurn, playerTurn }
 }
 
-const choosePosition = (gameBoard: GameBoard) => {
-    const positions = [
-        Position.topleft,
-        Position.topcenter,
-        Position.topright,
-        Position.centerleft,
-        Position.center,
-        Position.centerright,
-        Position.bottomleft,
-        Position.bottomcenter,
-        Position.bottomright
-    ]
-
-    while (true) {
-        let randomNum = positions[Math.floor(Math.random() * 10)]
-        if (!gameBoard.isPositionMarked(positions[randomNum])) {
-            return positions[randomNum]
-        }
-    }
-
-}

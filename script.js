@@ -36,7 +36,21 @@ function GameBoard() {
         console.log(board.get(Position.centerleft), board.get(Position.center), board.get(Position.centerright));
         console.log(board.get(Position.bottomleft), board.get(Position.bottomcenter), board.get(Position.bottomright));
     };
-    return { setMark: setMark, isPositionMarked: isPositionMarked, getMark: getMark, showBoard: showBoard };
+    var resetBoard = function () {
+        var makeTileEmpty = function (_, key) { return board.set(key, " "); };
+        board.forEach(makeTileEmpty);
+        showBoard();
+    };
+    var anySpacesLeft = function () {
+        var isThereSpace = false;
+        board.forEach(function (space) {
+            if (space === ' ') {
+                isThereSpace = true;
+            }
+        });
+        return isThereSpace;
+    };
+    return { setMark: setMark, isPositionMarked: isPositionMarked, getMark: getMark, showBoard: showBoard, resetBoard: resetBoard, anySpacesLeft: anySpacesLeft };
 }
 function Player(name, playerType, mark) {
     var getMark = function () { return mark; };
@@ -65,7 +79,15 @@ var game = (function () {
     };
     var decideFirstPlayer = function () {
         var randomNum = Math.floor(Math.random() * 2);
-        randomNum === 1 ? playerOne.playerTurn = true : playerTwo.playerTurn = true;
+        if (randomNum === 1) {
+            playerOne.playerTurn = true;
+            playerTwo.playerTurn = false;
+        }
+        else {
+            playerOne.playerTurn = false;
+            playerTwo.playerTurn = true;
+        }
+        console.log("Player One goes ".concat(playerOne.playerTurn ? "first" : "second"));
     };
     var getCurrentPlayer = function () { return playerOne.playerTurn ? playerOne : playerTwo; };
     var makeComputerPlay = function () {
@@ -81,15 +103,26 @@ var game = (function () {
             Position.bottomright
         ];
         while (true) {
-            var randomNum = positions[Math.floor(Math.random() * 10)];
+            var randomNum = Math.floor(Math.random() * 10);
             if (!gameBoard.isPositionMarked(positions[randomNum])) {
                 return positions[randomNum];
             }
         }
     };
-    var checkWinner = function (gameboard) {
+    var checkWinner = function (mark) {
+        var currentMark = mark;
+        if (gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.topcenter) === currentMark && gameBoard.getMark(Position.topright) === currentMark ||
+            gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.topleft) === currentMark && gameBoard.getMark(Position.centerleft) === currentMark && gameBoard.getMark(Position.bottomleft) === currentMark ||
+            gameBoard.getMark(Position.centerleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.centerright) === currentMark ||
+            gameBoard.getMark(Position.topcenter) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.bottomcenter) === currentMark ||
+            gameBoard.getMark(Position.topright) === currentMark && gameBoard.getMark(Position.centerright) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.bottomleft) === currentMark && gameBoard.getMark(Position.bottomcenter) === currentMark && gameBoard.getMark(Position.bottomright) === currentMark ||
+            gameBoard.getMark(Position.bottomleft) === currentMark && gameBoard.getMark(Position.center) === currentMark && gameBoard.getMark(Position.topright) === currentMark) {
+            return mark === "O" ? playerOne : playerTwo;
+        }
+        return null;
     };
-    var decideWinner = function (winner) { return 'void'; };
     var changeTurns = function () {
         if (playerOne.playerTurn) {
             playerOne.playerTurn = false;
@@ -106,10 +139,35 @@ var game = (function () {
             var mark = currentPlayer.getMark();
             gameBoard.setMark(position, mark);
             gameBoard.showBoard();
+            var isWinner = checkWinner(currentPlayer.getMark());
+            if (isWinner) {
+                makeAnnounce(isWinner);
+                startNewGame();
+                return;
+            }
+            if (!gameBoard.anySpacesLeft()) {
+                console.log("TIE!");
+                startNewGame();
+                return;
+            }
             changeTurns();
+            if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
+                var position_1 = makeComputerPlay();
+                makePlay(position_1);
+            }
         }
     };
-    var reset = function () { };
+    var makeAnnounce = function (winner) {
+        console.log("".concat(winner.name, " is the winner!"));
+    };
+    var startNewGame = function () {
+        gameBoard.resetBoard();
+        decideFirstPlayer();
+        if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
+            var position = makeComputerPlay();
+            makePlay(position);
+        }
+    };
     return { setGame: setGame, makePlay: makePlay };
 })();
 var createPlayer = function (playerName, playerMark, type) {
@@ -125,23 +183,4 @@ var createPlayer = function (playerName, playerMark, type) {
             playerTurn = false;
     };
     return { name: name, playerType: playerType, getMark: getMark, togglePlayerTurn: togglePlayerTurn, playerTurn: playerTurn };
-};
-var choosePosition = function (gameBoard) {
-    var positions = [
-        Position.topleft,
-        Position.topcenter,
-        Position.topright,
-        Position.centerleft,
-        Position.center,
-        Position.centerright,
-        Position.bottomleft,
-        Position.bottomcenter,
-        Position.bottomright
-    ];
-    while (true) {
-        var randomNum = positions[Math.floor(Math.random() * 10)];
-        if (!gameBoard.isPositionMarked(positions[randomNum])) {
-            return positions[randomNum];
-        }
-    }
 };
