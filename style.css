@@ -23,11 +23,11 @@ body {
 
 .bottomContainer {
     .inputs,
-    .buttons {
+    .buttons,
+    .names {
         display: flex;
         gap: 100px;
         padding: 20px;
-        /* width: 100%; */
 
         button {
             padding: 5px 15px;
@@ -45,5 +45,18 @@ body {
                 padding: 3px;
             }
         }
+        span{
+            position: relative;
+            font-size: 25px;
+
+            &::after {
+                position: absolute;
+                display: block;
+                left: 39%;
+                font-size: 45px;
+                content: attr(id);
+            }
+        }
     }
 }
+

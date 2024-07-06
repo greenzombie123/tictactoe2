@@ -283,7 +283,7 @@ function configureInputs(playerType: PlayerType) {
     let inputDiv = document.querySelector(".inputs") as HTMLElement
     let inputs = (Array.from(document.querySelectorAll("input")) as HTMLInputElement[])
     let button = document.querySelector("button") as HTMLElement
-    
+
     inputDiv.style.display = "flex"
 
     if (playerType === "computer") {
@@ -293,14 +293,28 @@ function configureInputs(playerType: PlayerType) {
 
     const startGame = () => {
         let playerOneName = inputs[0].value || "Player One"
-        let playerTwoName = inputs[1].value
+        if (playerType === "computer") {
+            configureNames(playerOneName, "Computer")
+            game.setGame(playerOneName, "", playerType)
+        } else {
+            let playerTwo = playerType === "human" && inputs[1].value === "" ? "Player Two" : inputs[1].value
+            configureNames(playerOneName, playerTwo)
+            game.setGame(playerOneName, playerTwo, playerType)
+        }
         hideInputs()
-        game.setGame(playerOneName, playerTwoName, playerType)
     }
 
     button.addEventListener("click", startGame)
 
-    const hideInputs = ()=> inputDiv.style.display = "block"
+    const hideInputs = () => inputDiv.style.display = "none"
+}
+
+function configureNames(player1Name: string, player2Name: string) {
+    const nameContainer = document.querySelector(".names") as HTMLElement
+    nameContainer.style.display = "flex"
+    const names = Array.from(document.querySelectorAll(".names span")) as HTMLElement[]
+    names[0].textContent = player1Name
+    names[1].textContent = player2Name
 }
 
 const tictactoe: TicTacToe = (() => {

@@ -223,12 +223,26 @@ function configureInputs(playerType) {
     }
     var startGame = function () {
         var playerOneName = inputs[0].value || "Player One";
-        var playerTwoName = inputs[1].value;
+        if (playerType === "computer") {
+            configureNames(playerOneName, "Computer");
+            game.setGame(playerOneName, "", playerType);
+        }
+        else {
+            var playerTwo = playerType === "human" && inputs[1].value === "" ? "Player Two" : inputs[1].value;
+            configureNames(playerOneName, playerTwo);
+            game.setGame(playerOneName, playerTwo, playerType);
+        }
         hideInputs();
-        game.setGame(playerOneName, playerTwoName, playerType);
     };
     button.addEventListener("click", startGame);
-    var hideInputs = function () { return inputDiv.style.display = "block"; };
+    var hideInputs = function () { return inputDiv.style.display = "none"; };
+}
+function configureNames(player1Name, player2Name) {
+    var nameContainer = document.querySelector(".names");
+    nameContainer.style.display = "flex";
+    var names = Array.from(document.querySelectorAll(".names span"));
+    names[0].textContent = player1Name;
+    names[1].textContent = player2Name;
 }
 var tictactoe = (function () {
     var initialize = function () {
