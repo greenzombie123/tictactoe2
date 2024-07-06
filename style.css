@@ -1,0 +1,49 @@
+body {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.gameBoard {
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    height: 400px;
+    width: 400px;
+
+    .cell {
+        border: 1px solid black;
+    }
+}
+
+.messageContainer {
+    height: 60px;
+}
+
+.bottomContainer {
+    .inputs,
+    .buttons {
+        display: flex;
+        gap: 100px;
+        padding: 20px;
+        /* width: 100%; */
+
+        button {
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 24px;
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 20px;
+
+            input {
+                padding: 3px;
+            }
+        }
+    }
+}

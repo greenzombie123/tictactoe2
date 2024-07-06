@@ -34,6 +34,7 @@ interface GameBoard {
 interface Game {
     setGame: (playerName1: string, playerName2: string, opponentType: PlayerType) => void
     makePlay: (position: Position) => void
+    getMark: (position: Position) => Mark
 }
 
 interface checkWinner {
@@ -91,23 +92,15 @@ function GameBoard(): GameBoard {
     return { setMark, isPositionMarked, getMark, showBoard, resetBoard, anySpacesLeft }
 }
 
-function Player(name: string, playerType: PlayerType, mark: Mark): Player {
-    const getMark = () => mark
-    let playerTurn = false
-    const togglePlayerTurn = () => { playerTurn ? playerTurn = false : playerTurn = true }
-    return { name, getMark, togglePlayerTurn, playerTurn, playerType }
-}
-
 let game = ((): Game => {
     let playerOne: Player
     let playerTwo: Player
-    let gameBoard: GameBoard
+    let gameBoard: GameBoard = GameBoard()
 
     const setGame = (name1: string, name2: string, opponentType: PlayerType,) => {
         playerOne = createPlayer(name1, "O", "human")
         if (opponentType === "computer") playerTwo = createPlayer("computer", "X", "computer")
         else playerTwo = createPlayer(name2, "X", "human")
-        gameBoard = GameBoard()
         console.log(`${playerOne.name + " " + playerOne.playerType} vs ${playerTwo.name + " " + playerTwo.playerType}`)
         gameBoard.showBoard()
         decideFirstPlayer()
@@ -123,7 +116,7 @@ let game = ((): Game => {
             playerOne.playerTurn = true
             playerTwo.playerTurn = false
         }
-        else{
+        else {
             playerOne.playerTurn = false
             playerTwo.playerTurn = true
         }
@@ -218,7 +211,11 @@ let game = ((): Game => {
         }
     }
 
-    return { setGame, makePlay }
+    const getMark = (position: Position) => {
+        return gameBoard.getMark(position)
+    }
+
+    return { setGame, makePlay, getMark }
 })()
 
 const createPlayer = (playerName: string, playerMark: Mark, type: PlayerType): Player => {
@@ -235,3 +232,83 @@ const createPlayer = (playerName: string, playerMark: Mark, type: PlayerType): P
     return { name, playerType, getMark, togglePlayerTurn, playerTurn }
 }
 
+/* Front End */
+interface TicTacToe {
+    initialize: () => void
+}
+
+interface Cells {
+    makePlay: (postion: Position) => (position: Position) => void
+    renderBoard: () => void
+}
+
+function Cells(): Cells {
+    const cells = (Array.from(document.querySelectorAll(".cell")) as HTMLElement[])
+    cells.forEach(cell => {
+        cell.addEventListener("click", makePlay(cell.dataset.position as Position))
+    })
+
+    const renderBoard = () => {
+        cells.forEach(cell => {
+            const mark = game.getMark(cell.dataset.position as Position)
+            cell.textContent = mark
+        })
+    }
+    const makePlay = (position: Position) => {
+        return () => {
+            game.makePlay(position)
+        }
+    }
+
+    return { makePlay, renderBoard }
+}
+
+function configureButtons() {
+    let buttonDiv = document.querySelector(".buttons") as HTMLElement
+    let buttons = (Array.from(document.querySelectorAll(".buttons button")) as HTMLElement[])
+    const getOpponentType = (opponentType: PlayerType) =>
+        () => {
+            closeButtons()
+            configureInputs(opponentType)
+        }
+
+    buttons[0].addEventListener("click", getOpponentType("human"))
+    buttons[1].addEventListener("click", getOpponentType("computer"))
+
+    // const renderButtons = () => buttonDiv.style.display = "block"
+    const closeButtons = () => buttonDiv.style.display = "none"
+}
+
+function configureInputs(playerType: PlayerType) {
+    let inputDiv = document.querySelector(".inputs") as HTMLElement
+    let inputs = (Array.from(document.querySelectorAll("input")) as HTMLInputElement[])
+    let button = document.querySelector("button") as HTMLElement
+    
+    inputDiv.style.display = "flex"
+
+    if (playerType === "computer") {
+        inputs[1].disabled = true
+        inputs[1].value = "Computer"
+    }
+
+    const startGame = () => {
+        let playerOneName = inputs[0].value || "Player One"
+        let playerTwoName = inputs[1].value
+        hideInputs()
+        game.setGame(playerOneName, playerTwoName, playerType)
+    }
+
+    button.addEventListener("click", startGame)
+
+    const hideInputs = ()=> inputDiv.style.display = "block"
+}
+
+const tictactoe: TicTacToe = (() => {
+    const initialize = () => {
+        configureButtons()
+    }
+
+    return { initialize }
+})()
+
+tictactoe.initialize()

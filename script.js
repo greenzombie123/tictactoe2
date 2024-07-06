@@ -52,23 +52,16 @@ function GameBoard() {
     };
     return { setMark: setMark, isPositionMarked: isPositionMarked, getMark: getMark, showBoard: showBoard, resetBoard: resetBoard, anySpacesLeft: anySpacesLeft };
 }
-function Player(name, playerType, mark) {
-    var getMark = function () { return mark; };
-    var playerTurn = false;
-    var togglePlayerTurn = function () { playerTurn ? playerTurn = false : playerTurn = true; };
-    return { name: name, getMark: getMark, togglePlayerTurn: togglePlayerTurn, playerTurn: playerTurn, playerType: playerType };
-}
 var game = (function () {
     var playerOne;
     var playerTwo;
-    var gameBoard;
+    var gameBoard = GameBoard();
     var setGame = function (name1, name2, opponentType) {
         playerOne = createPlayer(name1, "O", "human");
         if (opponentType === "computer")
             playerTwo = createPlayer("computer", "X", "computer");
         else
             playerTwo = createPlayer(name2, "X", "human");
-        gameBoard = GameBoard();
         console.log("".concat(playerOne.name + " " + playerOne.playerType, " vs ").concat(playerTwo.name + " " + playerTwo.playerType));
         gameBoard.showBoard();
         decideFirstPlayer();
@@ -168,7 +161,10 @@ var game = (function () {
             makePlay(position);
         }
     };
-    return { setGame: setGame, makePlay: makePlay };
+    var getMark = function (position) {
+        return gameBoard.getMark(position);
+    };
+    return { setGame: setGame, makePlay: makePlay, getMark: getMark };
 })();
 var createPlayer = function (playerName, playerMark, type) {
     var mark = playerMark;
@@ -184,3 +180,60 @@ var createPlayer = function (playerName, playerMark, type) {
     };
     return { name: name, playerType: playerType, getMark: getMark, togglePlayerTurn: togglePlayerTurn, playerTurn: playerTurn };
 };
+function Cells() {
+    var cells = Array.from(document.querySelectorAll(".cell"));
+    cells.forEach(function (cell) {
+        cell.addEventListener("click", makePlay(cell.dataset.position));
+    });
+    var renderBoard = function () {
+        cells.forEach(function (cell) {
+            var mark = game.getMark(cell.dataset.position);
+            cell.textContent = mark;
+        });
+    };
+    var makePlay = function (position) {
+        return function () {
+            game.makePlay(position);
+        };
+    };
+    return { makePlay: makePlay, renderBoard: renderBoard };
+}
+function configureButtons() {
+    var buttonDiv = document.querySelector(".buttons");
+    var buttons = Array.from(document.querySelectorAll(".buttons button"));
+    var getOpponentType = function (opponentType) {
+        return function () {
+            closeButtons();
+            configureInputs(opponentType);
+        };
+    };
+    buttons[0].addEventListener("click", getOpponentType("human"));
+    buttons[1].addEventListener("click", getOpponentType("computer"));
+    // const renderButtons = () => buttonDiv.style.display = "block"
+    var closeButtons = function () { return buttonDiv.style.display = "none"; };
+}
+function configureInputs(playerType) {
+    var inputDiv = document.querySelector(".inputs");
+    var inputs = Array.from(document.querySelectorAll("input"));
+    var button = document.querySelector("button");
+    inputDiv.style.display = "flex";
+    if (playerType === "computer") {
+        inputs[1].disabled = true;
+        inputs[1].value = "Computer";
+    }
+    var startGame = function () {
+        var playerOneName = inputs[0].value || "Player One";
+        var playerTwoName = inputs[1].value;
+        hideInputs();
+        game.setGame(playerOneName, playerTwoName, playerType);
+    };
+    button.addEventListener("click", startGame);
+    var hideInputs = function () { return inputDiv.style.display = "block"; };
+}
+var tictactoe = (function () {
+    var initialize = function () {
+        configureButtons();
+    };
+    return { initialize: initialize };
+})();
+tictactoe.initialize();

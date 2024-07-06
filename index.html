@@ -1,12 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script src="./script.js"></script>
+    <script src="./script.js" defer></script>
+    <link rel="stylesheet" href="./modermNormalize.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
+
 <body>
-    
+    <div class="gameBoard">
+        <div class="cell" data-position="topleft"></div>
+        <div class="cell" data-position="topcenter"></div>
+        <div class="cell" data-position="topright"></div>
+        <div class="cell" data-position="centerleft"></div>
+        <div class="cell" data-position="center"></div>
+        <div class="cell" data-position="centerright"></div>
+        <div class="cell" data-position="bottomleft"></div>
+        <div class="cell" data-position="bottomcenter"></div>
+        <div class="cell" data-position="bottomright"></div>
+    </div>
+    <div class="messageContainer">
+
+    </div>
+    <div class="bottomContainer">
+        <div class="inputs" style="display: none;">
+            <label for="playerOne">Player One<input id="playerOne" type="text"></label>
+            <button type="button">Play</button>
+            <label for="playerTwo">Player Two<input id="playerTwo" type="text"></label>
+        </div>
+        <div class="buttons">
+            <button type="button">Human</button>
+            <button type="button">Computer</button>
+        </div>
+    </div>
 </body>
+
 </html>
