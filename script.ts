@@ -35,6 +35,7 @@ interface Game {
     setGame: (playerName1: string, playerName2: string, opponentType: PlayerType) => void
     makePlay: (position: Position) => void
     getMark: (position: Position) => Mark
+    getIsRoundFinished: () => boolean
 }
 
 interface checkWinner {
@@ -96,6 +97,8 @@ let game = ((): Game => {
     let playerOne: Player
     let playerTwo: Player
     let gameBoard: GameBoard = GameBoard()
+    let isRoundFinished: boolean = false
+    let isGameLocked = false
 
     const setGame = (name1: string, name2: string, opponentType: PlayerType,) => {
         playerOne = createPlayer(name1, "O", "human")
@@ -107,6 +110,7 @@ let game = ((): Game => {
         if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
             let position = makeComputerPlay()
             makePlay(position)
+            renderComputerFirstMove(position)
         }
     }
 
@@ -173,7 +177,17 @@ let game = ((): Game => {
             playerTwo.playerTurn = false
         }
     }
+
+    const setIsRoundFinished = (isFinished: boolean) => {
+        isRoundFinished = isFinished
+    }
+
+    const getIsRoundFinished = () => isRoundFinished
+
+    const toggleIsGameLocked = () => isGameLocked ? isGameLocked = false : isGameLocked = true
+
     const makePlay = (position: Position) => {
+        if (isGameLocked) return
         if (!gameBoard.isPositionMarked(position)) {
             const currentPlayer = getCurrentPlayer()
             const mark = currentPlayer.getMark()
@@ -182,12 +196,24 @@ let game = ((): Game => {
             const isWinner = checkWinner(currentPlayer.getMark())
             if (isWinner) {
                 makeAnnounce(isWinner)
-                startNewGame()
+                toggleIsGameLocked()
+                setIsRoundFinished(true)
+                setTimeout(() => {
+                    setIsRoundFinished(false)
+                    toggleIsGameLocked()
+                    startNewGame()
+                }, 1000)
                 return
             }
             if (!gameBoard.anySpacesLeft()) {
                 console.log("TIE!")
-                startNewGame()
+                setIsRoundFinished(true)
+                toggleIsGameLocked()
+                setTimeout(() => {
+                    setIsRoundFinished(false)
+                    toggleIsGameLocked()
+                    startNewGame()
+                }, 1000)
                 return
             }
             changeTurns()
@@ -215,7 +241,7 @@ let game = ((): Game => {
         return gameBoard.getMark(position)
     }
 
-    return { setGame, makePlay, getMark }
+    return { setGame, makePlay, getMark, getIsRoundFinished }
 })()
 
 const createPlayer = (playerName: string, playerMark: Mark, type: PlayerType): Player => {
@@ -237,13 +263,30 @@ interface TicTacToe {
     initialize: () => void
 }
 
-interface Cells {
-    makePlay: (postion: Position) => (position: Position) => void
-    renderBoard: () => void
-}
+function Cells(game: Game) {
+    let cellsDisabled = false
+    const cells = Array.from(document.querySelectorAll(".cell")) as HTMLElement[]
 
-function Cells(): Cells {
-    const cells = (Array.from(document.querySelectorAll(".cell")) as HTMLElement[])
+    const disableCells = () => cellsDisabled = true
+    const enableCells = () => cellsDisabled = false
+
+
+    const makePlay = (position: Position) => {
+        return () => {
+            if (!cellsDisabled) {
+                game.makePlay(position)
+                renderBoard()
+                if (game.getIsRoundFinished()) {
+                    disableCells()
+                    setTimeout(() => {
+                        enableCells()
+                        renderBoard()
+                    }, 2000)
+                }
+            }
+        }
+    }
+
     cells.forEach(cell => {
         cell.addEventListener("click", makePlay(cell.dataset.position as Position))
     })
@@ -254,22 +297,15 @@ function Cells(): Cells {
             cell.textContent = mark
         })
     }
-    const makePlay = (position: Position) => {
-        return () => {
-            game.makePlay(position)
-        }
-    }
-
-    return { makePlay, renderBoard }
 }
 
-function configureButtons() {
+function renderButtons() {
     let buttonDiv = document.querySelector(".buttons") as HTMLElement
     let buttons = (Array.from(document.querySelectorAll(".buttons button")) as HTMLElement[])
     const getOpponentType = (opponentType: PlayerType) =>
         () => {
             closeButtons()
-            configureInputs(opponentType)
+            renderInputs(opponentType)
         }
 
     buttons[0].addEventListener("click", getOpponentType("human"))
@@ -279,7 +315,7 @@ function configureButtons() {
     const closeButtons = () => buttonDiv.style.display = "none"
 }
 
-function configureInputs(playerType: PlayerType) {
+function renderInputs(playerType: PlayerType) {
     let inputDiv = document.querySelector(".inputs") as HTMLElement
     let inputs = (Array.from(document.querySelectorAll("input")) as HTMLInputElement[])
     let button = document.querySelector("button") as HTMLElement
@@ -302,6 +338,7 @@ function configureInputs(playerType: PlayerType) {
             game.setGame(playerOneName, playerTwo, playerType)
         }
         hideInputs()
+        Cells(game)
     }
 
     button.addEventListener("click", startGame)
@@ -317,12 +354,9 @@ function configureNames(player1Name: string, player2Name: string) {
     names[1].textContent = player2Name
 }
 
-const tictactoe: TicTacToe = (() => {
-    const initialize = () => {
-        configureButtons()
-    }
+function renderComputerFirstMove(position: Position) {
+    const cell = document.querySelector(`[data-position="${position}"]`)!
+    cell.textContent = "X"
+}
 
-    return { initialize }
-})()
-
-tictactoe.initialize()
+renderButtons()

@@ -56,6 +56,8 @@ var game = (function () {
     var playerOne;
     var playerTwo;
     var gameBoard = GameBoard();
+    var isRoundFinished = false;
+    var isGameLocked = false;
     var setGame = function (name1, name2, opponentType) {
         playerOne = createPlayer(name1, "O", "human");
         if (opponentType === "computer")
@@ -68,6 +70,7 @@ var game = (function () {
         if (playerTwo.playerTurn && playerTwo.playerType === "computer") {
             var position = makeComputerPlay();
             makePlay(position);
+            renderComputerFirstMove(position);
         }
     };
     var decideFirstPlayer = function () {
@@ -126,7 +129,14 @@ var game = (function () {
             playerTwo.playerTurn = false;
         }
     };
+    var setIsRoundFinished = function (isFinished) {
+        isRoundFinished = isFinished;
+    };
+    var getIsRoundFinished = function () { return isRoundFinished; };
+    var toggleIsGameLocked = function () { return isGameLocked ? isGameLocked = false : isGameLocked = true; };
     var makePlay = function (position) {
+        if (isGameLocked)
+            return;
         if (!gameBoard.isPositionMarked(position)) {
             var currentPlayer = getCurrentPlayer();
             var mark = currentPlayer.getMark();
@@ -135,12 +145,24 @@ var game = (function () {
             var isWinner = checkWinner(currentPlayer.getMark());
             if (isWinner) {
                 makeAnnounce(isWinner);
-                startNewGame();
+                toggleIsGameLocked();
+                setIsRoundFinished(true);
+                setTimeout(function () {
+                    setIsRoundFinished(false);
+                    toggleIsGameLocked();
+                    startNewGame();
+                }, 1000);
                 return;
             }
             if (!gameBoard.anySpacesLeft()) {
                 console.log("TIE!");
-                startNewGame();
+                setIsRoundFinished(true);
+                toggleIsGameLocked();
+                setTimeout(function () {
+                    setIsRoundFinished(false);
+                    toggleIsGameLocked();
+                    startNewGame();
+                }, 1000);
                 return;
             }
             changeTurns();
@@ -164,7 +186,7 @@ var game = (function () {
     var getMark = function (position) {
         return gameBoard.getMark(position);
     };
-    return { setGame: setGame, makePlay: makePlay, getMark: getMark };
+    return { setGame: setGame, makePlay: makePlay, getMark: getMark, getIsRoundFinished: getIsRoundFinished };
 })();
 var createPlayer = function (playerName, playerMark, type) {
     var mark = playerMark;
@@ -180,8 +202,26 @@ var createPlayer = function (playerName, playerMark, type) {
     };
     return { name: name, playerType: playerType, getMark: getMark, togglePlayerTurn: togglePlayerTurn, playerTurn: playerTurn };
 };
-function Cells() {
+function Cells(game) {
+    var cellsDisabled = false;
     var cells = Array.from(document.querySelectorAll(".cell"));
+    var disableCells = function () { return cellsDisabled = true; };
+    var enableCells = function () { return cellsDisabled = false; };
+    var makePlay = function (position) {
+        return function () {
+            if (!cellsDisabled) {
+                game.makePlay(position);
+                renderBoard();
+                if (game.getIsRoundFinished()) {
+                    disableCells();
+                    setTimeout(function () {
+                        enableCells();
+                        renderBoard();
+                    }, 2000);
+                }
+            }
+        };
+    };
     cells.forEach(function (cell) {
         cell.addEventListener("click", makePlay(cell.dataset.position));
     });
@@ -191,20 +231,14 @@ function Cells() {
             cell.textContent = mark;
         });
     };
-    var makePlay = function (position) {
-        return function () {
-            game.makePlay(position);
-        };
-    };
-    return { makePlay: makePlay, renderBoard: renderBoard };
 }
-function configureButtons() {
+function renderButtons() {
     var buttonDiv = document.querySelector(".buttons");
     var buttons = Array.from(document.querySelectorAll(".buttons button"));
     var getOpponentType = function (opponentType) {
         return function () {
             closeButtons();
-            configureInputs(opponentType);
+            renderInputs(opponentType);
         };
     };
     buttons[0].addEventListener("click", getOpponentType("human"));
@@ -212,7 +246,7 @@ function configureButtons() {
     // const renderButtons = () => buttonDiv.style.display = "block"
     var closeButtons = function () { return buttonDiv.style.display = "none"; };
 }
-function configureInputs(playerType) {
+function renderInputs(playerType) {
     var inputDiv = document.querySelector(".inputs");
     var inputs = Array.from(document.querySelectorAll("input"));
     var button = document.querySelector("button");
@@ -233,6 +267,7 @@ function configureInputs(playerType) {
             game.setGame(playerOneName, playerTwo, playerType);
         }
         hideInputs();
+        Cells(game);
     };
     button.addEventListener("click", startGame);
     var hideInputs = function () { return inputDiv.style.display = "none"; };
@@ -244,10 +279,8 @@ function configureNames(player1Name, player2Name) {
     names[0].textContent = player1Name;
     names[1].textContent = player2Name;
 }
-var tictactoe = (function () {
-    var initialize = function () {
-        configureButtons();
-    };
-    return { initialize: initialize };
-})();
-tictactoe.initialize();
+function renderComputerFirstMove(position) {
+    var cell = document.querySelector("[data-position=\"".concat(position, "\"]"));
+    cell.textContent = "X";
+}
+renderButtons();
